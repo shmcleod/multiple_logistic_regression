@@ -1,0 +1,754 @@
+# Restart ctrl, shift, F10
+
+# Packages that will be used for regression:
+
+library(tidyverse)
+library(dplyr)
+library(plyr)
+library(readr)
+library(ggplot2)
+library(gridExtra)
+library(stats)
+library(gplots)
+library(tidycomm)
+library(caTools)
+library(glmnet)
+library(pROC)
+library(AICcmodavg)
+library(wesanderson)
+
+# Setting the working directory:
+
+setwd('C:/WGU/D208/Datasets/Churn')
+
+# Importing the dataset:
+
+churn_df <-read.csv('churn_data.csv')
+
+# Checking the structure of the data:
+
+str(churn_df)
+
+# Renaming the dataset:
+
+mydata <- churn_df
+
+# Summary/Structure of Data
+
+str(mydata)
+
+summary(mydata)
+
+head(mydata)
+
+
+# Searching for Duplicates
+
+dupes <- duplicated(mydata)
+
+# Summing to see if duplicates are present:
+
+sum(dupes)
+
+
+# Listing columns to be removed as they are not meaningful:
+columns_to_remove <- c('CaseOrder', 'Customer_id', 'Interaction', 'UID', 'City', 
+                       'State', 'County', 'Zip', 'Lat', 'Lng', 'Population', 
+                       'Area', 'TimeZone', 'Job', 'Marital', 'PaymentMethod')
+
+# Remove the specified columns:
+mydata <- mydata[, -which(names(mydata) %in% columns_to_remove)]
+
+
+# Changing Column Names of Ordinal Data:
+
+colnames(mydata)[colnames(mydata) == 'Item1'] <- 'Response'
+colnames(mydata)[colnames(mydata) == 'Item2'] <- 'Fixes'
+colnames(mydata)[colnames(mydata) == 'Item3'] <- 'Replacements'
+colnames(mydata)[colnames(mydata) == 'Item4'] <- 'Reliability'
+colnames(mydata)[colnames(mydata) == 'Item5'] <- 'Options'
+colnames(mydata)[colnames(mydata) == 'Item6'] <- 'Respectful'
+colnames(mydata)[colnames(mydata) == 'Item7'] <- 'CourtExchange'
+colnames(mydata)[colnames(mydata) == 'Item8'] <- 'ActiveListening'
+
+str(mydata)
+
+# Categorical data summaries based on churn:
+
+# Internet Service
+
+cd1 <- ggplot(mydata, aes(x = Churn, fill = InternetService)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+  geom_text(stat = "count", aes(label = scales::percent(..count../sum(..count..)),
+                                y = ..count.., group = InternetService), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5) +
+  labs(title = "Churn Distribution by Internet Service",
+       x = "Churn",
+       y = "Count") +
+    scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+# Gender
+
+cd2 <- ggplot(mydata, aes(x = Churn, fill = Gender)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+  geom_text(stat = "count", aes(label = scales::percent(..count../sum(..count..)),
+                                y = ..count.., group = Gender), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5) +
+  labs(title = "Churn Distribution by Gender",
+       x = "Churn",
+       y = "Count") +
+  scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+# Contract
+
+cd3 <- ggplot(mydata, aes(x = Churn, fill = Contract)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+  geom_text(stat = "count", aes(label = scales::percent(..count../sum(..count..)),
+                                y = ..count.., group = Contract), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5) +
+  labs(title = "Churn Distribution by Contract",
+       x = "Churn",
+       y = "Count") +
+  scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+# Without Churn
+
+# Internet Service
+
+cd_noc1 <- ggplot(mydata, aes(x = InternetService, fill = InternetService)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+  geom_text(stat = "count", aes(label = scales::percent(..count../sum(..count..)),
+                                y = ..count.., group = InternetService), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5) +
+  labs(title = "Distribution by Internet Service",
+       x = "InternetService",
+       y = "Count") +
+  scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+# Gender
+
+cd_noc2 <- ggplot(mydata, aes(x = Gender, fill = Gender)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+  geom_text(stat = "count", aes(label = scales::percent(..count../sum(..count..)),
+                                y = ..count.., group = Gender), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5) +
+  labs(title = "Distribution by Gender",
+       x = "Gender",
+       y = "Count") +
+  scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+# Contract
+
+cd_noc3 <- ggplot(mydata, aes(x = Contract, fill = Contract)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+  geom_text(stat = "count", aes(label = scales::percent(..count../sum(..count..)),
+                                y = ..count.., group = Contract), 
+            position = position_dodge(width = 0.9),
+            vjust = -0.5) +
+  labs(title = "Distribution by Contract",
+       x = "Contract",
+       y = "Count") +
+  scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+# Without percent to save space:
+
+# Internet Service
+
+cd1a <- ggplot(mydata, aes(x = InternetService, fill = InternetService)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+   labs(title = "Distribution by Internet Service",
+       x = "InternetService",
+       y = "Count") +
+  scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+# Gender
+
+cd2a <- ggplot(mydata, aes(x = Gender, fill = Gender)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+  labs(title = "Distribution by Gender",
+       x = "Gender",
+       y = "Count") +
+  scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+# Contract
+
+cd3a<- ggplot(mydata, aes(x = Contract, fill = Contract)) +
+  geom_bar(position = "dodge", color = "black", show.legend = TRUE) +
+  labs(title = "Distribution by Contract",
+       x = "Contract",
+       y = "Count") +
+  scale_fill_manual(values = wes_palette('Royal2' , n = 3)) +
+  theme_minimal()
+
+
+# Arranging the grids (distributions) by variable:
+
+grid.arrange(cd_noc1, cd1)
+grid.arrange(cd_noc2, cd2)
+grid.arrange(cd_noc3, cd3)
+
+# Smaller version without percentages:
+
+grid.arrange(cd1a, cd2a, cd3a)
+
+# ----------------------------------------------------------------
+
+# Creating Dummy Variables for Categorical Data
+
+mydata$DummyGender <- ifelse(mydata$Gender == 'Male', 1, 0)
+mydata$DummyChurn <- ifelse(mydata$Churn == 'Yes', 1, 0)
+mydata$DummyTechie <- ifelse(mydata$Techie == 'Yes', 1, 0)
+mydata$DummyContract <- ifelse(mydata$Contract == 'Two Year', 1, 0)
+mydata$DummyPort_modem <- ifelse(mydata$Port_modem == 'Yes', 1, 0)
+mydata$DummyTablet <- ifelse(mydata$Tablet == 'Yes', 1, 0)
+mydata$DummyInternetService <- ifelse(mydata$InternetService == 'Fiber Optic', 1, 0)
+mydata$DummyPhone <- ifelse(mydata$Phone == 'Yes', 1, 0)
+mydata$DummyMultiple <- ifelse(mydata$Multiple == 'Yes', 1, 0)
+mydata$DummyOnlineSecurity <- ifelse(mydata$OnlineSecurity == 'Yes', 1, 0)
+mydata$DummyOnlineBackup <- ifelse(mydata$OnlineBackup == 'Yes', 1, 0)
+mydata$DummyDeviceProtection <- ifelse(mydata$DeviceProtection == 'Yes', 1, 0)
+mydata$DummyTechSupport <- ifelse(mydata$TechSupport == 'Yes', 1, 0)
+mydata$DummyStreamingTV <- ifelse(mydata$StreamingTV == 'Yes', 1, 0)
+mydata$DummyStreamingMovies <- ifelse(mydata$StreamingMovies == 'Yes', 1, 0)
+mydata$DummyPaperlessBilling <- ifelse(mydata$PaperlessBilling == 'Yes', 1, 0)
+
+# Dropping all old categorical variables:
+
+remove_original_categories <- c('Gender', 'Churn', 'Techie', 'Contract', 'Port_modem',
+                                'Tablet', 'InternetService', 'Phone', 'Multiple', 
+                                'OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
+                                'TechSupport', 'StreamingTV', 'StreamingMovies',
+                                'PaperlessBilling')
+
+mydata <- mydata[, -which(names(mydata) %in% remove_original_categories)]
+
+str(mydata)
+
+
+
+# Creating histograms for continuous variables by choosing variables first:
+selected_columns <- c('Children', 'Age', 'Income', 'Outage_sec_perweek', 'Email',
+                      'Contacts', 'Yearly_equip_failure', 'Tenure', 'MonthlyCharge',
+                      'Bandwidth_GB_Year')
+
+# Create the layout for multiple histograms in a visualization (2 rows, 5 columns):
+par(mfrow = c(2, 5))
+
+# Creating the histograms:
+for (col in selected_columns) {
+  hist(mydata[[col]], main = col, xlab = col, col = "lightblue")
+}
+
+
+# Boxplot for variables to check for outliers:
+
+boxplot(mydata$Tenure, main = 'Boxplot for Tenure')$out
+boxplot(mydata$Bandwidth_GB_Year, main = 'Boxplot for Bandwidth_GB_Year')$out
+boxplot(mydata$MonthlyCharge, main = 'Boxplot for MonthlyCharge')$out
+
+
+
+# Summary of Independent Variables
+
+Tenure_Summary <- ggplot(mydata, aes(x = DummyChurn)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+Gender_Summary <- ggplot(mydata, aes(x = DummyGender)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+Techie_Summary <- ggplot(mydata, aes(x = DummyTechie)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+Port_modem_Summary <- ggplot(mydata, aes(x = DummyPort_modem)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+Tablet_Summary <- ggplot(mydata, aes(x = DummyTablet)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+Contract_Summary <- ggplot(mydata, aes(x = DummyContract)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+
+PaperlessBilling_Summary <- ggplot(mydata, aes(x = DummyPaperlessBilling)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+InternetService_Summary <- ggplot(mydata, aes(x = DummyInternetService)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+Phone_Summary <- ggplot(mydata, aes(x = DummyPhone)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+Multiple_Summary <- ggplot(mydata, aes(x = DummyMultiple)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+OnlineSecruity_Summary <- ggplot(mydata, aes(x = DummyOnlineSecurity)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+OnlineBackup_Summary <- ggplot(mydata, aes(x = DummyOnlineBackup)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+
+DeviceProtection_Summary <- ggplot(mydata, aes(x = DummyDeviceProtection)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+TechSupport_Summary <- ggplot(mydata, aes(x = DummyTechSupport)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+StreamingTV_Summary <- ggplot(mydata, aes(x = DummyStreamingTV)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+StreamingMovies_Summary <- ggplot(mydata, aes(x = DummyStreamingMovies)) +
+  geom_bar(position = 'dodge', stat = 'count', fill = 'lightblue') +
+  geom_text(aes(label = paste0(round(prop.table(after_stat(count)) * 100, 2), '%')), stat = 'count')
+
+grid.arrange(Tenure_Summary, Gender_Summary, Techie_Summary, Port_modem_Summary, Tablet_Summary, Contract_Summary)
+grid.arrange(PaperlessBilling_Summary, InternetService_Summary, Phone_Summary, 
+             Multiple_Summary, OnlineSecruity_Summary, OnlineBackup_Summary)
+grid.arrange(OnlineBackup_Summary, DeviceProtection_Summary, TechSupport_Summary, StreamingTV_Summary, StreamingMovies_Summary)
+
+
+# .csv of data transformation
+
+write.csv(mydata, file = 'modified_dataset.csv', row.names = FALSE)
+
+
+
+# ---------------------------------------------------------------------
+
+# Bivariate Analysis:
+
+
+# Create scatterplot x = Children, y = Churn:
+
+sp1 <- ggplot(mydata, aes(x = Children, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Children vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Children, mydata$DummyChurn)^2, 3)), 
+       x = 'Children', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Age, y = Churn:
+
+sp2 <- ggplot(mydata, aes(x = Age, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Age vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Age, mydata$DummyChurn)^2, 3)), 
+       x = 'Age', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Income, y = Churn:
+
+sp3 <- ggplot(mydata, aes(x = Income, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Income vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Income, mydata$DummyChurn)^2, 3)), 
+       x = 'Income', 
+       y = 'Churn') +
+  theme_minimal()
+
+
+# Create scatterplot x = Gender, y = Tenure:
+
+sp4 <- ggplot(mydata, aes(x = DummyGender, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Gender vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$DummyGender, mydata$DummyChurn)^2, 3)), 
+       x = 'Gender', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Outage_sec_perweek , y = Churn:
+
+sp5 <- ggplot(mydata, aes(x = Outage_sec_perweek, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Outage_sec_perweek vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Outage_sec_perweek, mydata$DummyChurn)^2, 3)), 
+       x = 'Outage_sec_perweek', 
+       y = 'Churn') +
+  theme_minimal()
+
+
+# Create scatterplot x = Bandwidth_GB_Year , y = Churn:
+
+sp6 <- ggplot(mydata, aes(x = Bandwidth_GB_Year, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Bandwidth_GB_Year vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Bandwidth_GB_Year, mydata$DummyChurn)^2, 3)), 
+       x = 'Bandwidth_GB_Year', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Email , y = Churn:
+
+sp7 <- ggplot(mydata, aes(x = Email, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Email vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Email, mydata$DummyChurn)^2, 3)), 
+       x = 'Email', 
+       y = 'Churn') +
+  theme_minimal()
+
+
+# Create scatterplot x = Contacts , y = Churn:
+
+sp8 <- ggplot(mydata, aes(x = Contacts, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Contacts vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Contacts, mydata$DummyChurn)^2, 3)), 
+       x = 'Contacts', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Yearly_equip_failure, y = Churn:
+
+sp9 <- ggplot(mydata, aes(x = Yearly_equip_failure, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Yearly_equip_failure vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Yearly_equip_failure, mydata$DummyChurn)^2, 3)), 
+       x = 'Yearly_equip_failure', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = MonthlyCharge, y = Churn:
+
+sp10 <- ggplot(mydata, aes(x = MonthlyCharge, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of MonthlyCharge vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$MonthlyCharge, mydata$DummyChurn)^2, 3)), 
+       x = 'MonthlyCharge', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Timely Response, y = Churn:
+
+sp11 <- ggplot(mydata, aes(x = Response, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of TimelyResponse vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Response, mydata$DummyChurn)^2, 3)), 
+       x = 'TimelyResponse', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Timely Fixes, y = Churn:
+
+sp12 <- ggplot(mydata, aes(x = Fixes, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Timely Fixes vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Fixes, mydata$DummyChurn)^2, 3)), 
+       x = 'Timely Fixes', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Timely Replacements , y = Churn:
+
+sp13 <- ggplot(mydata, aes(x = Replacements, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Timely Replacements vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Replacements, mydata$DummyChurn)^2, 3)), 
+       x = 'Timely Replacements', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Reliability , y = Churn:
+
+sp14 <- ggplot(mydata, aes(x = Reliability, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Reliability vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Reliability, mydata$DummyChurn)^2, 3)), 
+       x = 'Reliability', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = Options , y = Churn:
+
+sp15 <- ggplot(mydata, aes(x = Options, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Options vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Options, mydata$DummyChurn)^2, 3)), 
+       x = 'Options', 
+       y = 'Churn') +
+  theme_minimal()
+
+
+# Create scatterplot x = Respectful Response , y = Churn:
+
+sp16 <- ggplot(mydata, aes(x = Respectful, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of RespectfulResponse vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$Respectful, mydata$DummyChurn)^2, 3)), 
+       x = 'Respectful Response', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = CourtExchange, y = Churn:
+
+sp17 <- ggplot(mydata, aes(x = CourtExchange, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Court Exchange vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$CourtExchange, mydata$DummyChurn)^2, 3)), 
+       x = 'Court Exchange', 
+       y = 'Churn') +
+  theme_minimal()
+
+# Create scatterplot x = EvidenceActiveListening, y = Churn:
+
+sp18 <- ggplot(mydata, aes(x = ActiveListening, y = DummyChurn)) +
+  geom_point(color = 'red') +
+  labs(title = paste('Scatterplot of Evidence Active Listening vs. Churn\n', 
+                     'R-squared:', round(cor(mydata$ActiveListening, mydata$DummyChurn)^2, 3)), 
+       x = 'Evidence Active Listening', 
+       y = 'Churn') +
+  theme_minimal()
+
+
+grid.arrange(sp1, sp2, sp3, sp4, sp5, sp6)
+grid.arrange(sp7, sp8, sp9, sp10, sp11, sp12)
+grid.arrange(sp13, sp14, sp15, sp16, sp17, sp18)
+
+# ------------------------------------------------------------------------------
+
+
+pscl::pR2(logistic_model_all)["McFadden"]
+pscl::pR2(reduced_model)["McFadden"]
+
+
+# Fit a logistic regression model with all predictors with Churn being the Dependent
+logistic_model_all <- glm(DummyChurn ~ ., data = mydata, family = binomial)
+
+
+# Display the summary of the model
+summary(logistic_model_all)
+
+print(logistic_model_all)
+
+# McFadden R:
+
+pscl::pR2(logistic_model_all)["McFadden"]
+
+
+#Reducing the model backwards
+reduced_model <- step(logistic_model_all, direction = 'backward')
+
+print(reduced_model)
+
+summary(reduced_model)
+
+pscl::pR2(reduced_model)["McFadden"]
+
+
+# Specifying the variables in the new reduced model 2 - Gender Included / Paperless Billing Excluded
+selected_variables_rm_1 <- c('Children', 'Age', 'Tenure', 'MonthlyCharge', 'Bandwidth_GB_Year', 'DummyGender', 'DummyTechie', 
+                           'DummyContract', 'DummyInternetService', 'DummyPort_modem', 'DummyDeviceProtection',
+                           'DummyPhone', 'DummyMultiple', 'DummyOnlineSecurity','DummyStreamingTV',
+                           'DummyStreamingMovies')
+
+# Creating the reduced model with specific variables
+reduced_model_2 <- glm(DummyChurn ~ ., 
+                     data = mydata[, c("DummyChurn", selected_variables_rm_1)], 
+                     family = binomial)
+
+summary(reduced_model_2)
+
+pscl::pR2(reduced_model_2)["McFadden"]
+
+# Specifying the variables in the new reduced model 3 - Paperless Billing Included / Gender Excluded
+selected_variables_rm_2 <- c('Children', 'Age', 'Tenure', 'MonthlyCharge', 'Bandwidth_GB_Year', 'DummyTechie', 
+                           'DummyContract', 'DummyInternetService', 'DummyPort_modem', 'DummyDeviceProtection',
+                           'DummyPhone', 'DummyMultiple', 'DummyOnlineSecurity','DummyStreamingTV',
+                           'DummyStreamingMovies', 'DummyPaperlessBilling')
+
+reduced_model_3 <- glm(DummyChurn ~ ., 
+                       data = mydata[, c("DummyChurn", selected_variables_rm_2)], 
+                       family = binomial)
+
+summary(reduced_model_3)
+
+pscl::pR2(reduced_model_3)["McFadden"]
+
+# Specifying the variables in the new reduced model 4 - Paperless Billing and Gender Excluded
+selected_variables_rm_3 <- c('Children', 'Age', 'Tenure', 'MonthlyCharge', 'Bandwidth_GB_Year', 'DummyTechie', 
+                             'DummyContract', 'DummyInternetService', 'DummyPort_modem', 'DummyDeviceProtection',
+                             'DummyPhone', 'DummyMultiple', 'DummyOnlineSecurity','DummyStreamingTV',
+                             'DummyStreamingMovies')
+reduced_model_4 <- glm(DummyChurn ~ ., 
+                       data = mydata[, c("DummyChurn", selected_variables_rm_3)], 
+                       family = binomial)
+
+summary(reduced_model_4)
+
+pscl::pR2(reduced_model_4)["McFadden"]
+
+# ------------------------------------------------------------------------------
+
+# Create a list of models
+model_list <- list(logistic_model_all, reduced_model, reduced_model_2)
+model_names <- c('all.mod', 'reduced.mod', 'reduced.mod2')
+
+# Run aictab to compare models
+aictab_result <- aictab(model_list, modnames = model_names)
+
+
+# Print the result
+print(aictab_result)
+
+# ------------------------------------------------------------------------------
+
+# Confusion Matrix
+
+# Predicted probabilities of Churn on first reduced
+predicted_probabilities <- predict(reduced_model, newdata = mydata, type = "response")
+
+# Convert probabilities to class labels (0 or 1) based on a threshold (e.g., 0.5)
+# This needs to be done since Churn is in class 0,1
+
+predicted_labels <- ifelse(predicted_probabilities > 0.5, 1, 0)
+
+# Creating the actual labels for Churn
+
+actual_labels <- mydata$DummyChurn
+
+# Both actual and predicted labels into the confusion matrix:
+
+conf_matrix <- table(actual_labels, predicted_labels)
+print(conf_matrix)
+
+
+# Getting Calculations of Accuracy from matrix
+
+# Explicitly using the table function from the caret package
+
+cm_data <- as.matrix(caret::confusionMatrix(conf_matrix)$table)
+
+# Calculate metrics
+
+accuracy <- sum(diag(cm_data)) / sum(cm_data) * 100
+precision <- cm_data[2, 2] / sum(cm_data[, 2])
+recall <- cm_data[2, 2] / sum(cm_data[2, ])
+specificity <- cm_data[1, 1] / sum(cm_data[1, ])
+
+# Print the metrics
+
+cat("Accuracy:", accuracy, "% \n")
+cat("Precision: ", precision, "\n")
+cat("Recall: ", recall, "\n")
+cat("Specificity: ", specificity, "\n")
+
+str(mydata)
+
+
+#-----------------------------------------------------
+
+
+# Predicted probabilities of Churn on second reduced (not needed as second reduced was worse)
+predicted_probabilities <- predict(reduced_model_2, newdata = mydata, type = "response")
+
+# Convert probabilities to class labels (0 or 1) based on a threshold (e.g., 0.5)
+# This needs to be done since Churn is in class 0,1
+
+predicted_labels_2 <- ifelse(predicted_probabilities > 0.5, 1, 0)
+
+# Creating the actual labels for Churn
+
+actual_labels <- mydata$DummyChurn
+
+# Both actual and predicted labels into the confusion matrix:
+
+conf_matrix <- table(actual_labels, predicted_labels_2)
+print(conf_matrix)
+
+
+
+# -----------------------------------------------------------------------------
+
+
+# Below are notes for the video to have easy access to the models:
+# 5487.3
+
+# Fit a logistic regression model with all predictors with Churn being the Dependent
+logistic_model_all <- glm(DummyChurn ~ ., data = mydata, family = binomial)
+
+
+# Display the summary of the model
+summary(logistic_model_all)
+
+# McFadden R:
+
+pscl::pR2(logistic_model_all)["McFadden"]
+
+
+#Reducing the model backwards
+reduced_model <- step(logistic_model_all, direction = 'backward')
+
+print(reduced_model)
+
+summary(reduced_model)
+
+pscl::pR2(reduced_model)["McFadden"]
+
+
+# Specifying the variables in the new reduced model 2 - Gender Included / Paperless Billing Excluded
+selected_variables_rm_1 <- c('Children', 'Age', 'Tenure', 'MonthlyCharge', 'Bandwidth_GB_Year', 'DummyGender', 'DummyTechie', 
+                             'DummyContract', 'DummyInternetService', 'DummyPort_modem', 'DummyDeviceProtection',
+                             'DummyPhone', 'DummyMultiple', 'DummyOnlineSecurity','DummyStreamingTV',
+                             'DummyStreamingMovies')
+
+# Creating the reduced model with specific variables
+reduced_model_2 <- glm(DummyChurn ~ ., 
+                       data = mydata[, c("DummyChurn", selected_variables_rm_1)], 
+                       family = binomial)
+
+summary(reduced_model_2)
+
+pscl::pR2(reduced_model_2)["McFadden"]
+
+# Specifying the variables in the new reduced model 3 - Paperless Billing Included / Gender Excluded
+selected_variables_rm_2 <- c('Children', 'Age', 'Tenure', 'MonthlyCharge', 'Bandwidth_GB_Year', 'DummyTechie', 
+                             'DummyContract', 'DummyInternetService', 'DummyPort_modem', 'DummyDeviceProtection',
+                             'DummyPhone', 'DummyMultiple', 'DummyOnlineSecurity','DummyStreamingTV',
+                             'DummyStreamingMovies', 'DummyPaperlessBilling')
+
+reduced_model_3 <- glm(DummyChurn ~ ., 
+                       data = mydata[, c("DummyChurn", selected_variables_rm_2)], 
+                       family = binomial)
+
+summary(reduced_model_3)
+
+pscl::pR2(reduced_model_3)["McFadden"]
+
+# Specifying the variables in the new reduced model 4 - Paperless Billing and Gender Excluded
+selected_variables_rm_3 <- c('Children', 'Age', 'Tenure', 'MonthlyCharge', 'Bandwidth_GB_Year', 'DummyTechie', 
+                             'DummyContract', 'DummyInternetService', 'DummyPort_modem', 'DummyDeviceProtection',
+                             'DummyPhone', 'DummyMultiple', 'DummyOnlineSecurity','DummyStreamingTV',
+                             'DummyStreamingMovies')
+reduced_model_4 <- glm(DummyChurn ~ ., 
+                       data = mydata[, c("DummyChurn", selected_variables_rm_3)], 
+                       family = binomial)
+
+summary(reduced_model_4)
+
+pscl::pR2(reduced_model_4)["McFadden"]
+
+
+# Initial: 5487.3
+# First Reduced: 5462.4
+
+# Second (w Gender / wo PB): 5462.9
+# Third (w PB / wo Gender): 5462.5
+# Fourth (wo Both): 5463
+
+# The End
